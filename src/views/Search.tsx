@@ -1,8 +1,10 @@
-import { ArrowLeft, Camera, ChevronRight, Package, Search as SearchIcon } from 'lucide-react';
+import { ArrowLeft, Camera, ChevronRight, Package, Search as SearchIcon, Sparkles } from 'lucide-react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Search() {
   const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
 
   const results = [
     {
@@ -67,62 +69,70 @@ export default function Search() {
 
       <main className="max-w-screen-xl mx-auto px-4 md:px-6 pt-4 pb-20">
         <div className="relative w-full max-w-3xl mx-auto mb-10 group">
-          <div className="relative flex items-center bg-white rounded-full shadow-lg border border-slate-200/60 overflow-hidden focus-within:ring-4 focus-within:ring-blue-500/10 focus-within:border-blue-400 transition-all duration-300 py-1.5 px-2 focus-within:ring-slate-200 focus-within:border-slate-400">
-            <SearchIcon className="ml-4 text-slate-400" size={24} />
+          <div className="relative flex items-center bg-white rounded-full shadow-lg border border-indigo-200/60 overflow-hidden focus-within:ring-4 focus-within:ring-indigo-500/10 focus-within:border-indigo-400 transition-all duration-300 py-1.5 px-2">
+            <Sparkles className="ml-4 text-indigo-500" size={24} />
             <input
               autoFocus
               className="w-full py-3 px-3 bg-transparent border-none focus:ring-0 text-slate-700 placeholder-slate-400 font-medium text-lg outline-none"
-              placeholder="搜索产品名称、SKU 或品牌..."
+              placeholder="AI 智能搜索产品名称、SKU 或品牌..."
               type="text"
-              defaultValue="高端真皮"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
             <div className="flex items-center gap-1 pr-1">
-              <button className="p-2.5 text-white rounded-full shadow-md active:scale-95 transition-all bg-blue-600 hover:bg-blue-700">
+              <button className="p-2.5 text-white rounded-full shadow-md active:scale-95 transition-all bg-indigo-600 hover:bg-indigo-700">
                 <Camera size={22} />
               </button>
             </div>
           </div>
         </div>
 
-        <div className="max-w-3xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 px-1">最相关的搜索结果 (10)</h2>
-          </div>
+        {searchQuery.trim().length > 0 ? (
+          <div className="max-w-3xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 px-1">最相关的搜索结果 (10)</h2>
+            </div>
 
-          <div className="space-y-3">
-            {results.map((item, index) => (
-              <div
-                key={item.id}
-                onClick={() => navigate(`/product/${item.id}`)}
-                className="group flex items-center p-3 bg-white border border-slate-100 rounded-2xl hover:border-blue-200 hover:shadow-md transition-all cursor-pointer active:scale-[0.99]"
-              >
-                <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0 flex items-center justify-center">
-                  {item.image ? (
-                    <img
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                      src={item.image}
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <Package className="text-slate-300" size={32} />
-                  )}
-                </div>
-                <div className="ml-4 flex-grow">
-                  <div className="flex justify-between items-start">
-                    <h3 className="font-bold text-slate-800 group-hover:text-blue-700 transition-colors">{item.name}</h3>
+            <div className="space-y-3">
+              {results.map((item, index) => (
+                <div
+                  key={item.id}
+                  onClick={() => navigate(`/product/${item.id}`)}
+                  className="group flex items-center p-3 bg-white border border-slate-100 rounded-2xl hover:border-blue-200 hover:shadow-md transition-all cursor-pointer active:scale-[0.99]"
+                >
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0 flex items-center justify-center">
+                    {item.image ? (
+                      <img
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                        src={item.image}
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <Package className="text-slate-300" size={32} />
+                    )}
                   </div>
-                  <p className="text-xs text-slate-500 mt-0.5">SPU: {item.spu}</p>
-                  <div className="flex items-center gap-3 mt-2">
-                    <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full font-medium">品牌: {item.brand}</span>
-                    <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full font-medium">类目: {item.category}</span>
+                  <div className="ml-4 flex-grow">
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-bold text-slate-800 group-hover:text-blue-700 transition-colors">{item.name}</h3>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">SPU: {item.spu}</p>
+                    <div className="flex items-center gap-3 mt-2">
+                      <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full font-medium">品牌: {item.brand}</span>
+                      <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full font-medium">类目: {item.category}</span>
+                    </div>
                   </div>
+                  <ChevronRight className="text-slate-300 ml-2 group-hover:translate-x-1 transition-transform" size={24} />
                 </div>
-                <ChevronRight className="text-slate-300 ml-2 group-hover:translate-x-1 transition-transform" size={24} />
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="max-w-3xl mx-auto flex flex-col items-center justify-center pt-20 text-slate-400">
+            <Sparkles size={48} className="text-indigo-200 mb-4" />
+            <p className="text-sm font-medium">输入关键词，AI 将为您智能匹配相关货品</p>
+          </div>
+        )}
       </main>
     </div>
   );
