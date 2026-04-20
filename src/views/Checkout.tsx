@@ -239,29 +239,18 @@ export default function Checkout() {
                   <div className="bg-white p-4 rounded-lg border border-[#d1d1d1]/20 space-y-4">
                     <div className="flex items-center gap-3 mb-2">
                       <MapPin size={18} className="text-[#0052CC]" />
-                      <label className="text-xs font-bold">立即输入联系信息</label>
+                      <label className="text-xs font-bold">配送信息收集</label>
                     </div>
-                    <div className="space-y-3 pl-8">
-                      <div className="relative">
-                        <input className="w-full bg-[#f1f1f1] border border-[#d1d1d1]/20 rounded-lg pl-4 pr-10 py-2.5 text-xs focus:bg-white focus:ring-1 focus:ring-black outline-none transition-all" placeholder="联系电话 (输入手机号自动匹配客户)" type="tel" />
-                        <button className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-[#0052CC] hover:bg-[#0052CC]/10 rounded-md transition-colors">
-                          <Users size={16} />
-                        </button>
-                      </div>
-                      <input className="w-full bg-[#f1f1f1] border border-[#d1d1d1]/20 rounded-lg px-4 py-2.5 text-xs focus:bg-white focus:ring-1 focus:ring-black outline-none transition-all" placeholder="收货人姓名" type="text" />
-                      <div className="space-y-3">
-                        <textarea className="w-full bg-[#f1f1f1] border border-[#d1d1d1]/20 rounded-lg px-4 py-2.5 text-xs focus:bg-white focus:ring-1 focus:ring-black outline-none transition-all resize-none" placeholder="详细地址信息" rows={2}></textarea>
-                        <div className="space-y-1.5">
-                          <input className="w-full bg-[#f1f1f1] border border-[#d1d1d1]/20 rounded-lg px-4 py-2.5 text-xs focus:bg-white focus:ring-1 focus:ring-black outline-none transition-all" placeholder="购买人身份证实名" required type="text" />
-                          <p className="text-[10px] text-[#5e5e5e]/70 italic px-1">跨境商品需实名认证</p>
+                    
+                    <div className="bg-[#f7f7f7] rounded-lg p-4 border border-[#d1d1d1]/20 ml-8">
+                      <div className="flex items-start gap-3">
+                        <div className="w-4 h-4 rounded-full border-4 border-black bg-white mt-0.5 flex-shrink-0"></div>
+                        <div>
+                          <label className="text-xs font-bold text-[#1a1c1c]">默认转发给客户填写</label>
+                          <p className="text-[10px] text-[#5e5e5e] leading-relaxed mt-1.5">创建订单后，系统将自动生成订单链接。可通过微信等方式转发，由客户自主完成收信地址、联系方式及跨境清关所需实名信息的填写。</p>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 pt-2">
-                      <div className="w-5 h-5 rounded-full border border-[#777777]"></div>
-                      <label className="text-xs font-medium text-[#5e5e5e]">由客户填写地址</label>
-                    </div>
-                    <p className="text-[10px] text-[#5e5e5e] leading-relaxed pl-8">创建订单后，系统将发送链接至客户手机号，由客户自主完成信息录入。</p>
                   </div>
                 )}
               </div>
