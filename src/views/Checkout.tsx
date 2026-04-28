@@ -11,6 +11,7 @@ export default function Checkout() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [deliveryMethod, setDeliveryMethod] = useState<'store' | 'express'>('express');
   const [selectedStore, setSelectedStore] = useState('store1');
+  const [storeDeliveryType, setStoreDeliveryType] = useState<'pickup' | 'hkmacau'>('pickup');
   
   const [activeOrderTab, setActiveOrderTab] = useState<'domestic' | 'cross_border'>('domestic');
   
@@ -18,8 +19,8 @@ export default function Checkout() {
   const [domesticPriceCNY, setDomesticPriceCNY] = useState('249');
   
   // Cross-border price state
-  const [crossBorderCurrency, setCrossBorderCurrency] = useState<'HKD' | 'CNY'>('HKD');
-  const [crossBorderPrice, setCrossBorderPrice] = useState('599');
+  const [crossBorderCurrency, setCrossBorderCurrency] = useState<'HKD' | 'CNY'>('CNY');
+  const [crossBorderPrice, setCrossBorderPrice] = useState('641');
 
   const domesticItems = [
     {
@@ -51,19 +52,16 @@ export default function Checkout() {
 
   const SUPPLY_PRICE_DOMESTIC = 200;
   const SUPPLY_PRICE_CROSS_BORDER = 500;
+  const DEFAULT_RETAIL_CNY = 641;
   const EXCHANGE_RATE = 0.914;
 
-  let TAX_RATE = 0;
-  let SHIPPING_FEE = 0;
-
-  if (deliveryMethod === 'express') {
-    TAX_RATE = 0.045; // 混合订单综合预估税率
-    SHIPPING_FEE = 40;
-  }
+  const EXPRESS_SHIPPING_FEE = 40;
+  const CROSS_BORDER_TAX_RATE = 0.091; // 9.1% comprehensive tax
+  const DOMESTIC_TAX_RATE = 0.045; // Simulated mixed tax
 
   // Domestic calculations
   const finalDomesticCNY = parseFloat(domesticPriceCNY) || 0;
-  const productPriceDomesticCNY = Math.max(0, (finalDomesticCNY - (deliveryMethod === 'express' ? SHIPPING_FEE / 2 : 0)) / (1 + TAX_RATE));
+  const productPriceDomesticCNY = Math.max(0, (finalDomesticCNY - (deliveryMethod === 'express' ? EXPRESS_SHIPPING_FEE / 2 : 0)) / (1 + DOMESTIC_TAX_RATE));
   const profitDomesticCNY = productPriceDomesticCNY - SUPPLY_PRICE_DOMESTIC;
   const isDomesticProfitNegative = profitDomesticCNY < 0;
 
@@ -71,10 +69,37 @@ export default function Checkout() {
   const finalCrossBorder = parseFloat(crossBorderPrice) || 0;
   const finalCrossBorderHKD = crossBorderCurrency === 'HKD' ? finalCrossBorder : finalCrossBorder / EXCHANGE_RATE;
   const finalCrossBorderCNY = crossBorderCurrency === 'CNY' ? finalCrossBorder : finalCrossBorder * EXCHANGE_RATE;
-  const productPriceCrossBorderCNY = Math.max(0, (finalCrossBorderCNY - (deliveryMethod === 'express' ? SHIPPING_FEE / 2 : 0)) / (1 + TAX_RATE));
+  
+  const isCBPriceAdjusted = Math.abs(finalCrossBorderCNY - DEFAULT_RETAIL_CNY) > 0.5;
+
+  let productPriceCrossBorderCNY = 0;
+  let estimatedTaxCB = 0;
+  let estimatedShippingCB = 0;
+  let commissionDiscountCB = 0;
+  const baseCommissionCB = DEFAULT_RETAIL_CNY - SUPPLY_PRICE_CROSS_BORDER;
+  
+  if (deliveryMethod === 'express') {
+    estimatedShippingCB = EXPRESS_SHIPPING_FEE;
+    if (isCBPriceAdjusted) {
+      // Inclusive of tax and shipping in the final display price
+      productPriceCrossBorderCNY = Math.max(0, (finalCrossBorderCNY - estimatedShippingCB) / (1 + CROSS_BORDER_TAX_RATE));
+      estimatedTaxCB = productPriceCrossBorderCNY * CROSS_BORDER_TAX_RATE;
+    } else {
+      // Not adjusted: Customer pays tax and shipping separately later
+      productPriceCrossBorderCNY = finalCrossBorderCNY;
+      estimatedTaxCB = productPriceCrossBorderCNY * CROSS_BORDER_TAX_RATE;
+    }
+    commissionDiscountCB = baseCommissionCB - (productPriceCrossBorderCNY - SUPPLY_PRICE_CROSS_BORDER);
+  } else {
+    // Store pickup
+    productPriceCrossBorderCNY = finalCrossBorderCNY;
+    commissionDiscountCB = baseCommissionCB - (productPriceCrossBorderCNY - SUPPLY_PRICE_CROSS_BORDER);
+  }
+
   const profitCrossBorderCNY = productPriceCrossBorderCNY - SUPPLY_PRICE_CROSS_BORDER;
   const isCrossBorderProfitNegative = profitCrossBorderCNY < 0;
 
+  // Aggregate current values for display
   const currentTotalCNY = activeOrderTab === 'domestic' ? finalDomesticCNY : finalCrossBorderCNY;
   const currentTotalHKD = activeOrderTab === 'domestic' ? finalDomesticCNY / EXCHANGE_RATE : finalCrossBorderHKD;
   const isCurrentProfitNegative = activeOrderTab === 'domestic' ? isDomesticProfitNegative : isCrossBorderProfitNegative;
@@ -89,6 +114,10 @@ export default function Checkout() {
   const displaySubTotal = activeOrderTab === 'domestic'
     ? `(HK$ ${(finalDomesticCNY / EXCHANGE_RATE).toFixed(2)})`
     : (crossBorderCurrency === 'HKD' ? `(¥ ${finalCrossBorderCNY.toFixed(2)})` : `(HK$ ${finalCrossBorderHKD.toFixed(2)})`);
+
+  // Dynamic Delivery Labels
+  const storeDeliveryLabel = activeOrderTab === 'cross_border' ? '本地/自提' : '门店自提';
+  const expressDeliveryLabel = activeOrderTab === 'cross_border' ? '跨境快递' : '极速快递';
 
   const toggleSection = (section: keyof typeof openSections) => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -187,51 +216,87 @@ export default function Checkout() {
                     className={`py-3 px-4 rounded-lg text-xs font-bold flex flex-col items-center gap-1.5 transition-all ${deliveryMethod === 'store' ? 'bg-white border-2 border-black shadow-sm' : 'bg-white border border-[#d1d1d1]/30 active:scale-95'}`}
                   >
                     <Store size={20} className={deliveryMethod === 'store' ? 'text-black' : 'text-[#5e5e5e]'} />
-                    门店自提
+                    {storeDeliveryLabel}
                   </button>
                   <button 
                     onClick={() => setDeliveryMethod('express')}
                     className={`py-3 px-4 rounded-lg text-xs font-bold flex flex-col items-center gap-1.5 transition-all ${deliveryMethod === 'express' ? 'bg-white border-2 border-black shadow-sm' : 'bg-white border border-[#d1d1d1]/30 active:scale-95'}`}
                   >
                     <Rocket size={20} className={deliveryMethod === 'express' ? 'text-[#0052CC]' : 'text-[#5e5e5e]'} />
-                    极速快递
+                    {expressDeliveryLabel}
                   </button>
                 </div>
 
                 {deliveryMethod === 'store' && (
                   <div className="bg-white p-4 rounded-lg border border-[#d1d1d1]/20 space-y-4">
-                    <div className="flex items-center gap-3 mb-2">
-                      <MapPin size={18} className="text-[#0052CC]" />
-                      <label className="text-xs font-bold">选择自提门店</label>
-                    </div>
-                    <div className="space-y-2">
-                      <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${selectedStore === 'store1' ? 'border-black bg-[#f9f9f9]' : 'border-[#d1d1d1]/30 hover:bg-[#f9f9f9]'}`}>
-                        <input 
-                          type="radio" 
-                          name="store" 
-                          className="mt-0.5 w-4 h-4 text-black focus:ring-black" 
-                          checked={selectedStore === 'store1'}
-                          onChange={() => setSelectedStore('store1')}
-                        />
-                        <div>
-                          <p className="text-sm font-bold text-[#1a1c1c]">上海静安嘉里中心店</p>
-                          <p className="text-xs text-[#5e5e5e] mt-1">上海市静安区南京西路1515号</p>
+                    {activeOrderTab === 'cross_border' && (
+                      <div className="flex bg-[#f1f1f1] p-1 rounded-lg">
+                        <button 
+                          onClick={() => setStoreDeliveryType('pickup')}
+                          className={`flex-1 py-1.5 text-[11px] font-bold rounded-md transition-all ${storeDeliveryType === 'pickup' ? 'bg-white shadow-sm text-black' : 'text-[#5e5e5e] hover:text-black'}`}
+                        >
+                          自提门店
+                        </button>
+                        <button 
+                          onClick={() => setStoreDeliveryType('hkmacau')}
+                          className={`flex-1 py-1.5 text-[11px] font-bold rounded-md transition-all ${storeDeliveryType === 'hkmacau' ? 'bg-white shadow-sm text-black' : 'text-[#5e5e5e] hover:text-black'}`}
+                        >
+                          配送港澳地址
+                        </button>
+                      </div>
+                    )}
+
+                    {(activeOrderTab === 'domestic' || storeDeliveryType === 'pickup') && (
+                      <>
+                        <div className="flex items-center gap-3 mb-2">
+                          <MapPin size={18} className="text-[#0052CC]" />
+                          <label className="text-xs font-bold">选择自提门店</label>
                         </div>
-                      </label>
-                      <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${selectedStore === 'store2' ? 'border-black bg-[#f9f9f9]' : 'border-[#d1d1d1]/30 hover:bg-[#f9f9f9]'}`}>
-                        <input 
-                          type="radio" 
-                          name="store" 
-                          className="mt-0.5 w-4 h-4 text-black focus:ring-black" 
-                          checked={selectedStore === 'store2'}
-                          onChange={() => setSelectedStore('store2')}
-                        />
-                        <div>
-                          <p className="text-sm font-bold text-[#1a1c1c]">北京国贸商城店</p>
-                          <p className="text-xs text-[#5e5e5e] mt-1">北京市朝阳区建国门外大街1号</p>
+                        <div className="space-y-2">
+                          <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${selectedStore === 'store1' ? 'border-black bg-[#f9f9f9]' : 'border-[#d1d1d1]/30 hover:bg-[#f9f9f9]'}`}>
+                            <input 
+                              type="radio" 
+                              name="store" 
+                              className="mt-0.5 w-4 h-4 text-black focus:ring-black" 
+                              checked={selectedStore === 'store1'}
+                              onChange={() => setSelectedStore('store1')}
+                            />
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="bg-black text-white text-[10px] px-1.5 py-0.5 rounded-sm font-bold leading-none">本店</span>
+                                <p className="text-sm font-bold text-[#1a1c1c]">上海静安嘉里中心店</p>
+                              </div>
+                              <p className="text-xs text-[#5e5e5e] mt-1">上海市静安区南京西路1515号</p>
+                            </div>
+                          </label>
+                          <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${selectedStore === 'store2' ? 'border-black bg-[#f9f9f9]' : 'border-[#d1d1d1]/30 hover:bg-[#f9f9f9]'}`}>
+                            <input 
+                              type="radio" 
+                              name="store" 
+                              className="mt-0.5 w-4 h-4 text-black focus:ring-black" 
+                              checked={selectedStore === 'store2'}
+                              onChange={() => setSelectedStore('store2')}
+                            />
+                            <div>
+                              <p className="text-sm font-bold text-[#1a1c1c]">北京国贸商城店</p>
+                              <p className="text-xs text-[#5e5e5e] mt-1">北京市朝阳区建国门外大街1号</p>
+                            </div>
+                          </label>
                         </div>
-                      </label>
-                    </div>
+                      </>
+                    )}
+
+                    {activeOrderTab === 'cross_border' && storeDeliveryType === 'hkmacau' && (
+                      <div className="bg-[#f7f7f7] rounded-lg p-4 border border-[#d1d1d1]/20">
+                        <div className="flex items-start gap-3">
+                          <div className="w-4 h-4 rounded-full border-4 border-black bg-white mt-0.5 flex-shrink-0"></div>
+                          <div>
+                            <label className="text-xs font-bold text-[#1a1c1c]">默认转发给客户填写</label>
+                            <p className="text-[10px] text-[#5e5e5e] leading-relaxed mt-1.5">创建订单后，系统将自动生成订单链接。可通过微信等方式转发，由客户自主完成收信地址（港澳地区）及联系方式的填写。</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -319,6 +384,14 @@ export default function Checkout() {
                           onChange={(e) => setCrossBorderPrice(e.target.value)}
                         />
                       </div>
+                      {activeOrderTab === 'cross_border' && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-[10px] text-[#5e5e5e]">官方指导售价: CNY ¥{DEFAULT_RETAIL_CNY}</span>
+                          {isCBPriceAdjusted && deliveryMethod === 'express' && (
+                            <span className="text-[9px] bg-[#0052CC]/10 text-[#0052CC] px-2 py-0.5 rounded-sm font-bold">一口价包税运模式</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -334,32 +407,66 @@ export default function Checkout() {
                     <span className="font-bold">¥ {currentSupplyPrice.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center text-[10px]">
-                    <span className="text-[#5e5e5e]">倒推商品销售价</span>
+                    <span className="text-[#5e5e5e]">倒推商品销售基数</span>
                     <span className="font-bold">¥ {currentProductPriceCNY.toFixed(2)}</span>
                   </div>
-                  {deliveryMethod === 'express' ? (
-                    <>
+
+                  {activeOrderTab === 'domestic' ? (
+                    // Domestic info
+                    deliveryMethod === 'express' ? (
+                      <>
+                        <div className="flex justify-between items-center text-[10px]">
+                          <span className="text-[#5e5e5e]">应付关税 (混合订单预估)</span>
+                          <span className="font-bold">¥ {(currentProductPriceCNY * DOMESTIC_TAX_RATE).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-[10px]">
+                          <span className="text-[#5e5e5e]">运费</span>
+                          <span className="font-bold">¥ {(EXPRESS_SHIPPING_FEE / 2).toFixed(2)}</span>
+                        </div>
+                      </>
+                    ) : (
                       <div className="flex justify-between items-center text-[10px]">
-                        <span className="text-[#5e5e5e]">应付关税 (混合订单预估)</span>
-                        <span className="font-bold">¥ {(currentProductPriceCNY * TAX_RATE).toFixed(2)}</span>
+                        <span className="text-[#5e5e5e]">关税及运费 ({storeDeliveryLabel})</span>
+                        <span className="font-bold text-green-600">¥ 0.00</span>
                       </div>
-                      <div className="flex justify-between items-center text-[10px]">
-                        <span className="text-[#5e5e5e]">运费</span>
-                        <span className="font-bold">¥ {(SHIPPING_FEE / 2).toFixed(2)}</span>
-                      </div>
-                    </>
+                    )
                   ) : (
-                    <div className="flex justify-between items-center text-[10px]">
-                      <span className="text-[#5e5e5e]">关税及运费 (门店自提)</span>
-                      <span className="font-bold text-green-600">¥ 0.00</span>
-                    </div>
+                    // CrossBorder info
+                    deliveryMethod === 'express' ? (
+                      isCBPriceAdjusted ? (
+                        <div className="bg-green-50 p-2 rounded border border-green-100 mt-1 shadow-sm">
+                          <div className="flex justify-between items-center text-[10px]">
+                            <span className="text-green-700 font-bold">佣金优惠让利 (涵盖已代付税运):</span>
+                            <span className="font-bold text-green-700">¥ {commissionDiscountCB.toFixed(2)}</span>
+                          </div>
+                          <p className="text-[9px] text-green-600/80 mt-1">
+                            已用佣金代付跨境税¥{estimatedTaxCB.toFixed(2)}及运费¥{estimatedShippingCB.toFixed(2)}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="bg-orange-50 p-2 rounded border border-orange-100 mt-1 shadow-sm">
+                          <div className="flex justify-between items-center text-[10px]">
+                            <span className="text-orange-700 font-bold">不含税运 (由客户扫码后支付):</span>
+                            <span className="font-bold text-orange-700">¥ {(estimatedTaxCB + estimatedShippingCB).toFixed(2)}</span>
+                          </div>
+                          <p className="text-[9px] text-orange-600/80 mt-1">
+                            仅含商品款，后续客户需补交税金¥{estimatedTaxCB.toFixed(2)}及运费¥{estimatedShippingCB.toFixed(2)}
+                          </p>
+                        </div>
+                      )
+                    ) : (
+                      <div className="flex justify-between items-center text-[10px]">
+                        <span className="text-[#5e5e5e]">关税及运费 ({storeDeliveryLabel})</span>
+                        <span className="font-bold text-green-600">¥ 0.00</span>
+                      </div>
+                    )
                   )}
                   <div className="h-px bg-[#d1d1d1]/30 w-full my-1"></div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <Info size={14} className={isCurrentProfitNegative ? "text-[#FF3B30]" : "text-green-600"} />
                       <span className={`text-[10px] font-bold ${isCurrentProfitNegative ? "text-[#FF3B30]" : "text-green-600"}`}>
-                        {isCurrentProfitNegative ? '错误: 销售价低于供货价' : `预计分润: +¥ ${currentProfitCNY.toFixed(2)}`}
+                        {isCurrentProfitNegative ? '错误: 不可低于货主价及税运成本' : `预计分销佣金: +¥ ${currentProfitCNY.toFixed(2)}`}
                       </span>
                     </div>
                   </div>
@@ -377,22 +484,37 @@ export default function Checkout() {
               <span className="text-[#5e5e5e]">商品销售价 </span>
               <span className="font-bold text-[#1a1c1c]">¥ {currentProductPriceCNY.toFixed(2)}</span>
             </div>
-            {deliveryMethod === 'express' ? (
-              <>
+            
+            {activeOrderTab === 'domestic' ? (
+              deliveryMethod === 'express' ? (
+                <>
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-[#5e5e5e]">关税 (预估)</span>
+                    <span className="font-bold text-[#1a1c1c]">¥ {(currentProductPriceCNY * DOMESTIC_TAX_RATE).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-[#5e5e5e]">运费</span>
+                    <span className="font-bold text-[#1a1c1c]">¥ {(EXPRESS_SHIPPING_FEE / 2).toFixed(2)}</span>
+                  </div>
+                </>
+              ) : (
                 <div className="flex justify-between items-center text-[11px]">
-                  <span className="text-[#5e5e5e]">关税 (预估)</span>
-                  <span className="font-bold text-[#1a1c1c]">¥ {(currentProductPriceCNY * TAX_RATE).toFixed(2)}</span>
+                  <span className="text-[#5e5e5e]">关税及运费</span>
+                  <span className="font-bold text-green-600">¥ 0.00 ({storeDeliveryLabel})</span>
                 </div>
-                <div className="flex justify-between items-center text-[11px]">
-                  <span className="text-[#5e5e5e]">运费</span>
-                  <span className="font-bold text-[#1a1c1c]">¥ {(SHIPPING_FEE / 2).toFixed(2)}</span>
-                </div>
-              </>
+              )
             ) : (
-              <div className="flex justify-between items-center text-[11px]">
-                <span className="text-[#5e5e5e]">关税及运费</span>
-                <span className="font-bold text-green-600">¥ 0.00 (门店自提)</span>
-              </div>
+              deliveryMethod === 'express' ? (
+                <div className="flex justify-between items-center text-[11px]">
+                  <span className="text-[#5e5e5e]">已含税运费 (包税包邮)</span>
+                  <span className="font-bold text-green-600">包含 ¥ {(estimatedTaxCB + estimatedShippingCB).toFixed(2)}</span>
+                </div>
+              ) : (
+                <div className="flex justify-between items-center text-[11px]">
+                  <span className="text-[#5e5e5e]">关税及运费</span>
+                  <span className="font-bold text-green-600">¥ 0.00 ({storeDeliveryLabel})</span>
+                </div>
+              )
             )}
           </div>
         )}
