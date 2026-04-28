@@ -55,12 +55,12 @@ export default function Checkout() {
   const DEFAULT_RETAIL_CNY = 641;
   const EXCHANGE_RATE = 0.914;
 
-  const EXPRESS_SHIPPING_FEE = 0; // 全局包邮
+  const EXPRESS_SHIPPING_FEE = 40;
   const CROSS_BORDER_TAX_RATE = 0.091; // 9.1% comprehensive tax
 
   // Domestic calculations
   const finalDomesticCNY = isPriceAdjusted ? (parseFloat(domesticPriceCNY) || 0) : 249;
-  const productPriceDomesticCNY = finalDomesticCNY;
+  const productPriceDomesticCNY = Math.max(0, finalDomesticCNY - (deliveryMethod === 'express' ? EXPRESS_SHIPPING_FEE / 2 : 0));
   const profitDomesticCNY = productPriceDomesticCNY - SUPPLY_PRICE_DOMESTIC;
   const isDomesticProfitNegative = profitDomesticCNY < 0;
 
@@ -71,16 +71,18 @@ export default function Checkout() {
   
   let productPriceCrossBorderCNY = 0;
   let estimatedTaxCB = 0;
+  let estimatedShippingCB = 0;
   let commissionDiscountCB = 0;
   const baseCommissionCB = DEFAULT_RETAIL_CNY - SUPPLY_PRICE_CROSS_BORDER;
   
   if (deliveryMethod === 'express') {
+    estimatedShippingCB = EXPRESS_SHIPPING_FEE;
     if (isPriceAdjusted) {
-      // Inclusive of tax in the final display price
-      productPriceCrossBorderCNY = Math.max(0, finalCrossBorderCNY / (1 + CROSS_BORDER_TAX_RATE));
+      // Inclusive of tax and shipping in the final display price
+      productPriceCrossBorderCNY = Math.max(0, (finalCrossBorderCNY - estimatedShippingCB) / (1 + CROSS_BORDER_TAX_RATE));
       estimatedTaxCB = productPriceCrossBorderCNY * CROSS_BORDER_TAX_RATE;
     } else {
-      // Not adjusted: Customer pays tax separately later
+      // Not adjusted: Customer pays tax and shipping separately later
       productPriceCrossBorderCNY = finalCrossBorderCNY;
       estimatedTaxCB = productPriceCrossBorderCNY * CROSS_BORDER_TAX_RATE;
     }
@@ -391,9 +393,9 @@ export default function Checkout() {
                           <span className="text-[10px] text-[#5e5e5e]">官方指导售价: CNY ¥{DEFAULT_RETAIL_CNY}</span>
                           {deliveryMethod === 'express' && (
                             isPriceAdjusted ? (
-                              <span className="text-[9px] bg-[#0052CC]/10 text-[#0052CC] px-2 py-0.5 rounded-sm font-bold">一口价包税模式</span>
+                              <span className="text-[9px] bg-[#0052CC]/10 text-[#0052CC] px-2 py-0.5 rounded-sm font-bold">一口价包税运模式</span>
                             ) : (
-                              <span className="text-[9px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-sm font-bold">客户支付税费模式</span>
+                              <span className="text-[9px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-sm font-bold">客户支付税运模式</span>
                             )
                           )}
                         </div>
@@ -409,11 +411,11 @@ export default function Checkout() {
                   </div>
                   <div className="h-px bg-[#d1d1d1]/30 w-full my-1"></div>
                   <div className="flex justify-between items-center text-[10px]">
-                    <span className="text-[#5e5e5e]">供货价合计 (固定)</span>
+                    <span className="text-[#5e5e5e]">供货价合计</span>
                     <span className="font-bold">¥ {currentSupplyPrice.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center text-[10px]">
-                    <span className="text-[#5e5e5e]">倒推商品销售基数</span>
+                    <span className="text-[#5e5e5e]">零售价</span>
                     <span className="font-bold">¥ {currentProductPriceCNY.toFixed(2)}</span>
                   </div>
 
@@ -423,7 +425,7 @@ export default function Checkout() {
                       <>
                         <div className="flex justify-between items-center text-[10px]">
                           <span className="text-[#5e5e5e]">运费</span>
-                          <span className="font-bold">¥ 0.00 (包邮)</span>
+                          <span className="font-bold">¥ {(EXPRESS_SHIPPING_FEE / 2).toFixed(2)}</span>
                         </div>
                       </>
                     ) : (
@@ -438,21 +440,21 @@ export default function Checkout() {
                       isPriceAdjusted ? (
                         <div className="bg-green-50 p-2 rounded border border-green-100 mt-1 shadow-sm">
                           <div className="flex justify-between items-center text-[10px]">
-                            <span className="text-green-700 font-bold">佣金优惠让利 (涵盖已代付关税):</span>
+                            <span className="text-green-700 font-bold">佣金优惠让利 (涵盖已代付税运):</span>
                             <span className="font-bold text-green-700">¥ {commissionDiscountCB.toFixed(2)}</span>
                           </div>
                           <p className="text-[9px] text-green-600/80 mt-1">
-                            已用佣金代付跨境税¥{estimatedTaxCB.toFixed(2)}，商品包邮
+                            已用佣金代付跨境税¥{estimatedTaxCB.toFixed(2)}及运费¥{estimatedShippingCB.toFixed(2)}
                           </p>
                         </div>
                       ) : (
                         <div className="bg-orange-50 p-2 rounded border border-orange-100 mt-1 shadow-sm">
                           <div className="flex justify-between items-center text-[10px]">
-                            <span className="text-orange-700 font-bold">不含税 (由客户扫码后支付):</span>
-                            <span className="font-bold text-orange-700">¥ {estimatedTaxCB.toFixed(2)}</span>
+                            <span className="text-orange-700 font-bold">不含税运 (由客户扫码后支付):</span>
+                            <span className="font-bold text-orange-700">¥ {(estimatedTaxCB + estimatedShippingCB).toFixed(2)}</span>
                           </div>
                           <p className="text-[9px] text-orange-600/80 mt-1">
-                            仅含商品款，无运费。后续客户需补交税金¥{estimatedTaxCB.toFixed(2)}
+                            仅含商品款，后续客户需补交税金¥{estimatedTaxCB.toFixed(2)}及运费¥{estimatedShippingCB.toFixed(2)}
                           </p>
                         </div>
                       )
@@ -468,7 +470,7 @@ export default function Checkout() {
                     <div className="flex items-center gap-1.5">
                       <Info size={14} className={isCurrentProfitNegative ? "text-[#FF3B30]" : "text-green-600"} />
                       <span className={`text-[10px] font-bold ${isCurrentProfitNegative ? "text-[#FF3B30]" : "text-green-600"}`}>
-                        {isCurrentProfitNegative ? '错误: 不可低于货主价及税费成本' : `预计分销佣金: +¥ ${currentProfitCNY.toFixed(2)}`}
+                        {isCurrentProfitNegative ? '错误: 不可低于货主价及税运成本' : `预计分销佣金: +¥ ${currentProfitCNY.toFixed(2)}`}
                       </span>
                     </div>
                   </div>
@@ -492,7 +494,7 @@ export default function Checkout() {
                 <>
                   <div className="flex justify-between items-center text-[11px]">
                     <span className="text-[#5e5e5e]">运费</span>
-                    <span className="font-bold text-[#1a1c1c]">¥ 0.00 (包邮)</span>
+                    <span className="font-bold text-[#1a1c1c]">¥ {(EXPRESS_SHIPPING_FEE / 2).toFixed(2)}</span>
                   </div>
                 </>
               ) : (
@@ -503,10 +505,23 @@ export default function Checkout() {
               )
             ) : (
               deliveryMethod === 'express' ? (
-                <div className="flex justify-between items-center text-[11px]">
-                  <span className="text-[#5e5e5e]">已含关税 (包税包邮)</span>
-                  <span className="font-bold text-green-600">包含 ¥ {estimatedTaxCB.toFixed(2)}</span>
-                </div>
+                isPriceAdjusted ? (
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-[#5e5e5e]">已含税运费 (包税包邮)</span>
+                    <span className="font-bold text-green-600">包含 ¥ {(estimatedTaxCB + estimatedShippingCB).toFixed(2)}</span>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center text-[11px]">
+                      <span className="text-[#5e5e5e]">税金</span>
+                      <span className="font-bold text-orange-600">+ ¥ {estimatedTaxCB.toFixed(2)} (由客户自付)</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[11px]">
+                      <span className="text-[#5e5e5e]">运费</span>
+                      <span className="font-bold text-orange-600">+ ¥ {estimatedShippingCB.toFixed(2)} (由客户自付)</span>
+                    </div>
+                  </div>
+                )
               ) : (
                 <div className="flex justify-between items-center text-[11px]">
                   <span className="text-[#5e5e5e]">关税及运费</span>
