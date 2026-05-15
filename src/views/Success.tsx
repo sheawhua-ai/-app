@@ -152,8 +152,9 @@ export default function Success() {
               <span className="font-manrope font-extrabold text-lg">HK$ 599.00</span>
             </div>
             
-            <div className="text-center">
+            <div className="text-center flex items-center justify-between">
               <p className="text-[9px] text-[#5e5e5e]">订单编号: ORD-CRS-8843</p>
+              <button onClick={() => navigate('/edit-price')} className="text-[9px] text-blue-600 underline font-bold">改价演示入口 (需未付款)</button>
             </div>
           </div>
         </div>

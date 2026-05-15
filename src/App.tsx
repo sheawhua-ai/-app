@@ -11,6 +11,7 @@ import Checkout from './views/Checkout';
 import ProductDetail from './views/ProductDetail';
 import Search from './views/Search';
 import Success from './views/Success';
+import EditOrderPrice from './views/EditOrderPrice';
 
 function DownloadButton() {
   const [isDownloading, setIsDownloading] = useState(false);
@@ -66,6 +67,7 @@ export default function App() {
         <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/success" element={<Success />} />
+        <Route path="/edit-price" element={<EditOrderPrice />} />
       </Routes>
     </HashRouter>
   );
